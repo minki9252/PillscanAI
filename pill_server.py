@@ -17,7 +17,7 @@ class PillLog(BaseModel):
 def init_db():
     conn = sqlite3.connect('pill_factory.db')
     c = conn.cursor()
-    # [상세주석] status 컬럼이 포함된 테이블 생성
+    # status 컬럼이 포함된 테이블 생성
     c.execute('''CREATE TABLE IF NOT EXISTS pill_logs
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   line_id TEXT,
