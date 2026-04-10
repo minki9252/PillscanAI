@@ -39,21 +39,21 @@ def read_root():
 # --- 알약 로그 저장 API 엔드포인트 ---
 @app.post("/log")
 async def log_pill(data: PillLog):
+    # 상태가 '정상'인 데이터는 저장하지 않고 리턴
+    if data.status == "정상":
+        return {"status": "skipped", "message": "정상 제품은 저장하지 않습니다."}
+
     time_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
     try:
         conn = sqlite3.connect('pill_factory.db')
         c = conn.cursor()
-        # [상세주석] 전달받은 4개 데이터 + 시간 정보를 DB에 삽입
         c.execute("INSERT INTO pill_logs (line_id, pill_name, company, status, timestamp) VALUES (?, ?, ?, ?, ?)",
                   (data.line_id, data.pill_name, data.company, data.status, time_str))
         conn.commit()
         conn.close()
-        
-        print(f"[*] DB 저장 성공: {data.pill_name} ({data.status})")
+        print(f"[🔥불량기록] {data.pill_name} 데이터 저장 완료")
         return {"status": "success", "pill": data.pill_name}
     except Exception as e:
-        print(f"[*] DB 에러: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
