@@ -2,18 +2,18 @@ import os
 import sys
 import cv2
 import requests
-import PyQt5
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QLabel, QVBoxLayout, 
-                             QHBoxLayout, QWidget, QTextEdit)
-from PyQt5.QtCore import QTimer, Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QImage, QPixmap, QFont
+from PySide6.QtWidgets import (QApplication, QMainWindow, QLabel, QVBoxLayout, 
+                               QHBoxLayout, QWidget, QTextEdit)
+from PySide6.QtCore import QTimer, Qt, QThread, Signal
+from PySide6.QtGui import QImage, QPixmap, QFont
 from ultralytics import YOLO
 
-# --- Qt 플러그인 경로 ---
-dirname = os.path.dirname(PyQt5.__file__)
-os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = os.path.join(dirname, 'Qt5', 'plugins', 'platforms')
+# --- Qt 플러그인 경로 설정 ---
+import PySide6
+dirname = os.path.dirname(PySide6.__file__)
+os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = os.path.join(dirname, 'plugins', 'platforms')
 
-# 모델 라벨 - 한글명 매핑
+# 모델이 예측한 영어 클래스명을 한국어 약품명으로 매핑하는 딕셔너리입니다.
 LABEL_TO_KOR = {
     "Famondine": "파모딘정", "Glomipide": "글로미피드정",
     "Loxoprofen": "경보록소프로펜나트륨수화물정", "Myoben": "미오벤정",
@@ -21,72 +21,92 @@ LABEL_TO_KOR = {
     "Dexidiphen": "덱시디펜정400밀리그램", "Eupasidin": "유파시딘에스정"
 }
 
-# --- AI 추론 전용 스레드 ---
+# --- AI 추론 전용 스레드 클래스 ---
 class DetectionThread(QThread):
-    result_ready = pyqtSignal(object, object)
+
+    result_ready = Signal(object, object)
 
     def __init__(self, model):
         super().__init__()
-        self.model = model
-        self.frame = None
-        self.is_running = True
+        self.model = model        # YOLO 모델 객체
+        self.frame = None        # 추론할 프레임 이미지
+        self.is_running = True   # 스레드 실행 상태 플래그
 
     def run(self):
+        """스레드가 시작되면 실행되는 루프입니다."""
         while self.is_running:
             if self.frame is not None:
-                # AI 연산을 별도 스레드에서 수행하여 GUI 끊김 방지
+                # 메인 스레드의 부하를 줄이기 위해 별도 스레드에서 AI 연산을 수행
+                # conf: 신뢰도 임계값, verbose: 로그 출력 여부
                 results = self.model(self.frame, conf=0.3, verbose=False)
+                # 결과값이 그려진 이미지(어노테이션 프레임) 생성
                 annotated_frame = results[0].plot()
+                # 결과를 메인 UI 스레드로 전송
                 self.result_ready.emit(annotated_frame, results)
                 self.frame = None 
             else:
+                # CPU 점유율 과다 방지를 위해 짧은 대기 시간 사용
                 self.msleep(5)
 
+# --- 메인 GUI 클래스 ---
 class PillDetectorGUI(QMainWindow):
     def __init__(self):
         super().__init__()
 
         self.model = YOLO(r'C:\Users\lms\OneDrive\문서\python\Pill_Detection\runs\detect\train8\weights\best.pt')
         
+        # AI 추론 스레드 초기화 및 시작
         self.det_thread = DetectionThread(self.model)
+        # 스레드에서 결과가 나오면 on_detection_finished 함수가 실행되도록 연결
         self.det_thread.result_ready.connect(self.on_detection_finished)
         self.det_thread.start()
         
         self.current_pill = None
         self.server_url = "http://127.0.0.1:5000/log" # FastAPI 서버 주소
         
+        # UI 구성요소 초기화
         self.initUI()
+        
+        # 카메라 설정 (OpenCV 사용)
         self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         
+        # 프레임 업데이트를 위한 타이머 설정
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_frame)
         self.timer.start(30)
 
     def initUI(self):
-        self.setWindowTitle('스마트팩토리 알약 검수 시스템 (불량 선별 저장 모드)')
+        """GUI의 레이아웃과 위젯을 설정합니다."""
+        self.setWindowTitle('스마트팩토리 알약 검수 시스템')
         self.setGeometry(100, 100, 1280, 800)
         
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QHBoxLayout(main_widget)
 
-        # 왼쪽 영역: 비디오 및 로그
+        # [왼쪽 상단 영역] 카메라 영상 및 로그 기록
         left_layout = QVBoxLayout()
         self.video_label = QLabel("카메라 로딩 중...")
         self.video_label.setFixedSize(640, 480)
         self.video_label.setStyleSheet("background-color: black; border: 2px solid #34495E;")
         left_layout.addWidget(self.video_label)
         
+        # [왼쪽 하단 영역] 서버 및 로그 기록
         self.log_area = QTextEdit()
         self.log_area.setReadOnly(True)
         self.log_area.setFixedHeight(150)
-        self.log_area.setStyleSheet("background-color: #FDFEFE;")
+        self.log_area.setStyleSheet("""
+            background-color: #1E1E1E; 
+            color: #DCDCDC; 
+            border: 1px solid #333333;
+            padding: 5px;
+        """)
         left_layout.addWidget(self.log_area)
         main_layout.addLayout(left_layout, stretch=1)
-
-        # 오른쪽 영역: 약학 정보 상세 표시
+        
+        # [오른쪽 영역] 알약의 상세 정보 출력
         right_layout = QVBoxLayout()
         self.name_label = QLabel("검수 대기 중")
         self.name_label.setFont(QFont("Malgun Gothic", 18, QFont.Bold))
@@ -100,48 +120,72 @@ class PillDetectorGUI(QMainWindow):
         main_layout.addLayout(right_layout, stretch=1)
 
     def update_frame(self):
+        """타이머에 의해 호출되며 카메라 영상을 읽어옵니다."""
         ret, frame = self.cap.read()
         if ret:
+            # 추론 스레드가 현재 비어있다면 분석용 프레임을 전달
             if self.det_thread.frame is None:
                 self.det_thread.frame = frame.copy()
+            # 원본 영상을 화면에 표시
             self.display_to_label(frame)
 
     def on_detection_finished(self, annotated_frame, results):
+        """AI 추론이 완료되었을 때 호출되는 콜백 함수입니다."""
+        # AI 결과가 그려진 영상을 화면에 갱신
         self.display_to_label(annotated_frame)
+        
+        # 감지된 물체가 있는 경우 처리
         if len(results[0].boxes) > 0:
             box = results[0].boxes[0]
-            pill_en = self.model.names[int(box.cls[0])]
-            conf = float(box.conf[0])
+            pill_en = self.model.names[int(box.cls[0])] # 모델 클래스 인덱스 -> 영문명
+            conf = float(box.conf[0])                  # 신뢰도 점수
+            
+            # 동일한 알약이 계속 감지될 때 중복 처리를 방지
             if self.current_pill != pill_en:
                 self.current_pill = pill_en
                 self.process_detection(pill_en, conf)
 
     def display_to_label(self, img):
+        """OpenCV 이미지를 Qt용 이미지(QPixmap)로 변환하여 레이블에 출력합니다."""
+        # BGR 형식을 RGB 형식으로 변환
         rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         h, w, c = rgb.shape
-        q_img = QImage(rgb.data, w, h, c * w, QImage.Format_RGB888)
-        self.video_label.setPixmap(QPixmap.fromImage(q_img).scaled(640, 480, Qt.KeepAspectRatio))
+        # QImage 객체 생성
+        q_img = QImage(rgb.data, w, h, c * w, QImage.Format.Format_RGB888)
+        # 레이블 크기에 맞춰 비율을 유지하며 스케일링 후 표시
+        self.video_label.setPixmap(QPixmap.fromImage(q_img).scaled(
+            640, 480, Qt.AspectRatioMode.KeepAspectRatio))
 
     def process_detection(self, pill_en, conf):
+        """감지된 정보를 바탕으로 공공데이터 API 조회 및 서버 전송을 처리합니다."""
         kor_name = LABEL_TO_KOR.get(pill_en, pill_en)
-        # 신뢰도 0.75 미만 시 '불량'으로 판정
+        # 신뢰도 0.75 미만 시 '불량'으로 판정 (비즈니스 로직)
         is_defect = conf < 0.75 
         status_str = "불량(의심)" if is_defect else "정상"
         
-        # UI 색상 설정
+        # 정상/불량에 따른 UI 텍스트 색상 결정
         title_color = "#C0392B" if is_defect else "#27AE60"
         self.name_label.setText(f"{kor_name} ({status_str})")
         self.name_label.setStyleSheet(f"color: {title_color};")
 
+        # 식품의약품안전처_의약품 낱알식별정보 공공데이터 API 호출
         url = 'http://apis.data.go.kr/1471000/MdcinGrnIdntfcInfoService03/getMdcinGrnIdntfcInfoList03'
-        params = {'serviceKey': '057a95bd3d088bd732e75b0406635329ffb6e29fe4704976439c238494daafba', 'item_name': kor_name, 'type': 'json'}
+        params = {
+            'serviceKey': '057a95bd3d088bd732e75b0406635329ffb6e29fe4704976439c238494daafba', 
+            'item_name': kor_name, 
+            'type': 'json'
+        }
         
         try:
-            res = requests.get(url, params=params, timeout=0.8)
-            item = res.json().get('body', {}).get('items', [{}])[0]
+            # API 요청 (응답 지연 방지를 위해 timeout 설정)
+            res = requests.get(url, params=params, timeout=3.0)
+            res_data = res.json()
+            items = res_data.get('body', {}).get('items', [])
+            item = items[0] if items else {}
+            
             entp_name = item.get('ENTP_NAME', '정보 없음')
 
-            # 상세 정보 HTML 출력
+            # 상세 정보 HTML 형식으로 구성하여 출력
             html_content = f"""
             <h3 style="color:{title_color};">[{status_str}] {item.get('ITEM_NAME', kor_name)}</h3>
             <hr>
@@ -154,7 +198,7 @@ class PillDetectorGUI(QMainWindow):
             """
             self.info_area.setHtml(html_content)
 
-            # --- 불량 데이터만 서버 전송 ---
+            # --- 불량 데이터 판별 시 서버로 로그 전송 ---
             if is_defect:
                 payload = {
                     "line_id": "Line_A_Minki",
@@ -162,27 +206,30 @@ class PillDetectorGUI(QMainWindow):
                     "company": entp_name, 
                     "status": status_str
                 }
-                # 불량인 경우에만 POST 요청 실행
+                # 서버로 POST 요청 (FastAPI 등)
                 resp = requests.post(self.server_url, json=payload, timeout=0.5)
                 if resp.status_code == 200:
                     self.log_area.append(f"⚠️ [경고] 불량 감지! DB 저장 완료: {kor_name}")
                 else:
                     self.log_area.append(f"❌ 서버 에러: {resp.status_code}")
             else:
-                # 정상 데이터는 전송하지 않고 로그만 남김
+                # 정상 데이터는 서버에 저장하지 않고 GUI 로그에만 표시
                 self.log_area.append(f"✅ 정상 통과: {kor_name} (DB 저장 제외)")
 
         except Exception as e:
+            # 네트워크 단절 또는 API 키 오류 시 예외 처리
             self.log_area.append(f"⚠️ 시스템 오류: {e}")
 
     def closeEvent(self, event):
-        self.det_thread.is_running = False
-        self.det_thread.wait()
-        self.cap.release()
+        """프로그램 종료 시 호출되어 자원을 해제합니다."""
+        self.det_thread.is_running = False # 스레드 루프 중단
+        self.det_thread.wait()             # 스레드 종료 대기
+        self.cap.release()                 # 카메라 해제
         event.accept()
 
 if __name__ == '__main__':
+    # PySide6 애플리케이션 시작
     app = QApplication(sys.argv)
     ex = PillDetectorGUI()
     ex.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
