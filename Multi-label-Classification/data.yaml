@@ -1,0 +1,12 @@
+names:
+- pill
+nc: 1
+roboflow:
+  license: Private
+  project: multi-label-classification-w3ocq
+  url: https://app.roboflow.com/mk-h4sai/multi-label-classification-w3ocq/1
+  version: 1
+  workspace: mk-h4sai
+test: C:/Users/lms/OneDrive/문서/python/Pill_Detection/Multi-label-Classification-1/test/images
+train: C:/Users/lms/OneDrive/문서/python/Pill_Detection/Multi-label-Classification-1/train/images
+val: C:/Users/lms/OneDrive/문서/python/Pill_Detection/Multi-label-Classification-1/valid/images
