@@ -4,8 +4,8 @@ import os
 import glob
 
 transform = A.Compose([
-    A.HorizontalFlip(p=0.5),
-    A.RandomRotate90(p=0.5),
+    A.HorizontalFlip(p=0.5),    
+    A.RandomRotate90(p=0.5),   
     A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.7),
     A.HueSaturationValue(hue_shift_limit=20, sat_shift_limit=30, val_shift_limit=20, p=0.5),
     A.GaussNoise(p=0.3), # var_limit 에러 방지를 위해 기본값 사용
@@ -44,7 +44,7 @@ def augment_data(img_path, label_path, output_dir, count=3):
         aug_bboxes = augmented['bboxes']
 
         # 결과 저장
-        img_name = f"{base_name}_aug_{i}.jpg"
+        img_name = f"{base_name}_aug_{i}.jpg"   
         lbl_name = f"{base_name}_aug_{i}.txt"
         
         # 이미지 저장 (한글 경로 대응)
