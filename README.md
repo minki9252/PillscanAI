@@ -1,65 +1,272 @@
-## 💊 PillscanAI: Deep Learning Based Pill Recognition & Info System
-> **딥러닝(YOLOv8)과 공공데이터 API를 활용한 지능형 알약 식별 및 실시간 관리 솔루션**
+# 💊 PillScanAI
 
-본 프로젝트는 제조 공정 및 스마트 팩토리 환경에서 약품의 오투약을 방지하고, 실시간 비전 검사를 통해 약품 정보를 즉각적으로 사용자에게 제공하는 것을 목표로 합니다.
+> YOLOv8 기반 실시간 알약 인식 및 스마트팩토리 불량 검수 시스템
 
----
-
-## 🚀 Key Features (주요 기능)
-* **실시간 객체 탐지 (Real-time Detection):** YOLOv8 모델을 사용하여 웹캠 환경에서 0.5초 이내의 빠른 알약 식별 수행.
-* **데이터 증강 (Data Augmentation):** OpenCV를 활용한 명암 변화, 노이즈 추가 등으로 실제 공정 환경(조명 변화 등)에 강인한 모델 구현.
-* **공공데이터 API 연동:** 식별된 알약의 특징을 바탕으로 식품의약품안전처 API와 통신하여 효능, 성분, 주의사항 등 상세 정보 출력.
-* **불량 판정 및 서버 로깅:** 신뢰도(Confidence) 임계값 기반 정상/불량 판정 및 원격 서버 로그 전송 시스템 구축.
-* **사용자 중심 GUI:** PySide6(Qt) 기반의 직관적인 대시보드와 실시간 시각화 인터페이스 제공.
+PillScanAI는 웹캠으로 촬영한 알약 이미지를 실시간으로 분석해 알약 종류를 분류하고, 신뢰도 기준에 따라 정상/불량 의심 여부를 판단하는 프로젝트입니다.  
+감지 결과는 PySide6 GUI에 표시되며, 불량 의심 데이터는 FastAPI 서버를 통해 SQLite 데이터베이스에 기록됩니다.
 
 ---
 
-## 🛠 Tech Stack (기술 스택)
-* **Language:** Python 3.11
-* **Deep Learning:** YOLOv8 (Ultralytics), OpenCV
-* **UI Framework:** PySide6 (Qt for Python)
-* **Database/API:** Public Data API (식품의약품안전처), REST API
-* **Tools:** VSCode, Git, GitHub, Roboflow
+## ✨ 주요 기능
+
+- 🎥 **실시간 객체 탐지**
+  - OpenCV로 웹캠 프레임을 수집하고 YOLOv8 모델로 알약을 탐지합니다.
+- 🧠 **커스텀 YOLOv8 학습**
+  - 직접 구성한 알약 이미지 데이터셋과 Roboflow 기반 데이터셋으로 모델을 학습했습니다.
+- 🖥️ **PySide6 데스크톱 GUI**
+  - 실시간 영상, 탐지 결과, 약품 상세 정보, 로그를 한 화면에서 확인할 수 있습니다.
+- 🏭 **스마트팩토리 검수 흐름**
+  - confidence 기준 미만의 감지 결과를 `불량(의심)`으로 분류합니다.
+- 🗄️ **FastAPI + SQLite 로그 저장**
+  - 불량 의심 알약만 서버로 전송해 DB에 저장합니다.
+- 🔎 **공공데이터 API 연동**
+  - 식품의약품안전처 의약품 낱알식별정보 API를 통해 실제 약품 정보를 조회합니다.
 
 ---
 
-## 🏗 System Architecture (시스템 구조)
+## 🛠️ 기술 스택
 
-
-
-1.  **Image Input:** OpenCV를 통한 실시간 프레임 캡처
-2.  **Inference:** YOLOv8n 모델 기반 객체 탐지 및 클래스 분류
-3.  **Data Processing:** 탐지된 클래스명을 기반으로 공공데이터 REST API 요청
-4.  **Display:** PySide6 GUI 상에 AI 분석 정보 및 API 데이터 렌더링
-5.  **Monitoring:** 불량 의심 시 Flask 서버로 실시간 로그 데이터 전송
-
----
-
-## 📈 Development Results (개발 성과)
-* **정확도:** 100 Epoch 학습 결과 **mAP50 0.995** 달성.
-* **최적화:** 추론 속도 **약 60ms** 달성으로 초당 15프레임 이상의 실시간 검수 가능.
-* **신뢰성:** 데이터 증강 기법을 통해 다양한 조명 조건에서도 85% 이상의 신뢰도 유지.
+| 구분 | 사용 기술 |
+| --- | --- |
+| Language | Python |
+| AI Model | YOLOv8, Ultralytics |
+| Computer Vision | OpenCV |
+| GUI | PySide6 |
+| Backend | FastAPI, Uvicorn |
+| Database | SQLite |
+| Dataset Tool | Roboflow |
+| API | 공공데이터포털 의약품 낱알식별정보 API |
 
 ---
 
-## 📺 Demo Screen (데모 화면)
+## 🏗️ 시스템 구조
+
+```mermaid
+flowchart LR
+    A["Webcam"] --> B["OpenCV Frame Capture"]
+    B --> C["YOLOv8 Inference"]
+    C --> D["PySide6 GUI"]
+    C --> E{"Confidence < 0.75?"}
+    E -->|Yes| F["불량(의심) 판정"]
+    E -->|No| G["정상 통과"]
+    F --> H["FastAPI /log"]
+    H --> I["SQLite DB 저장"]
+    D --> J["공공데이터 API 약품 정보 표시"]
+```
+
+---
+
+## 📺 데모 화면
 
 | 실시간 탐지 및 정보 출력 |
 | :---: |
-| <img width="1302" height="882" alt="Image" src="https://github.com/user-attachments/assets/c3f75e3e-5aff-4dcf-8609-961dfdcbbaef" /> |
+| <img width="1302" height="882" alt="PillScanAI demo" src="https://github.com/user-attachments/assets/c3f75e3e-5aff-4dcf-8609-961dfdcbbaef" /> |
 
 ---
 
-## 👨‍💻 My Role (기여도 및 역할)
-* **모델 설계 및 학습:** Roboflow를 통한 데이터셋 구축 및 YOLOv8 하이퍼파라미터 튜닝.
-* **OpenCV 증강 스크립트 작성:** 모델 성능 향상을 위한 전처리 및 데이터 증강 파이프라인 개발.
-* **GUI 어플리케이션 개발:** Threading 기법을 사용한 비동기 영상 처리 및 UI 응답성 확보.
-* **API 통합:** RESTful API 통신 모듈 및 예외 처리 로직 구현.
+## 📁 프로젝트 구조
+
+```text
+Pill_Detection/
+├── Pill_Detection/
+│   ├── train/
+│   │   ├── images/          # 학습 이미지
+│   │   └── labels/          # YOLO 라벨
+│   └── valid/
+│       ├── images/          # 검증 이미지
+│       └── labels/          # 검증 라벨
+├── pill_gui.py              # 실시간 알약 검수 GUI
+├── pill_server.py           # FastAPI 로그 저장 서버
+├── train_pill.py            # YOLOv8 학습 스크립트
+├── webcam_test.py           # 웹캠 추론 테스트
+├── test.py                  # 단일 이미지 추론 테스트
+├── download_data.py         # Roboflow 데이터셋 다운로드 스크립트
+├── pill_factory.db          # SQLite 로그 DB
+└── README.md
+```
+
+> 참고: `runs/`, `*.pt`, `*.db`는 `.gitignore`에 포함되어 있어 GitHub 업로드 대상에서 제외됩니다.
 
 ---
 
-## 🏁 Future Works (향후 발전 계획)
-* **임베디드 최적화:** Jetson Nano 등 엣지 디바이스 배포를 위한 TensorRT 최적화.
-* **다중 라벨 분류:** 모양, 색상, 분할선을 개별적으로 인식하는 Multi-label Classification 고도화.
+## 🧪 데이터셋
+
+현재 폴더 기준 데이터 구성은 다음과 같습니다.
+
+| Split | Images | Labels |
+| --- | ---: | ---: |
+| Train | 122 | 44 |
+| Valid | 3 | 3 |
+
+탐지 대상 알약 클래스는 다음과 같이 한국어 약품명으로 매핑됩니다.
+
+| Model Label | Korean Name |
+| --- | --- |
+| Famondine | 파모딘정 |
+| Glomipide | 글로미피드정 |
+| Loxoprofen | 경보록소프로펜나트륨수화물정 |
+| Myoben | 미오벤정 |
+| Bronpass | 브론패스정 |
+| Cough | 코푸정 |
+| Dexidiphen | 덱시디펜정400밀리그램 |
+| Eupasidin | 유파시딘에스정 |
 
 ---
+
+## 📈 개발 성과
+
+- 🎯 **mAP50 0.995 달성**
+  - `runs/detect/pill_final_model8/results.csv` 기준 최종 학습 결과에서 mAP50 0.995를 기록했습니다.
+- ⚡ **실시간 검수 흐름 구현**
+  - 웹캠 입력부터 AI 추론, GUI 표시, 서버 로그 저장까지 하나의 흐름으로 연결했습니다.
+- 🧩 **실무형 기능 결합**
+  - 객체 탐지 모델, 공공데이터 API, 데스크톱 GUI, DB 저장 로직을 통합했습니다.
+
+---
+
+## 🚀 실행 방법
+
+### 1. 가상환경 생성 및 패키지 설치
+
+```bash
+python -m venv venv
+venv\Scripts\activate
+pip install ultralytics opencv-python PySide6 fastapi uvicorn requests pydantic roboflow
+```
+
+### 2. FastAPI 서버 실행
+
+```bash
+python pill_server.py
+```
+
+서버 실행 후 기본 주소:
+
+```text
+http://127.0.0.1:5000
+```
+
+### 3. GUI 실행
+
+```bash
+python pill_gui.py
+```
+
+GUI에서는 웹캠 화면, YOLO 탐지 결과, 약품 상세 정보, 정상/불량 로그를 확인할 수 있습니다.
+
+### 4. 웹캠 테스트 실행
+
+```bash
+python webcam_test.py
+```
+
+종료하려면 OpenCV 창에서 `q` 키를 누릅니다.
+
+---
+
+## 🏋️ 모델 학습
+
+학습 스크립트는 `train_pill.py`에서 실행합니다.
+
+```bash
+python train_pill.py
+```
+
+학습에는 YOLO 형식의 `data.yaml` 파일이 필요합니다.
+
+```yaml
+path: ./Pill_Detection
+train: train/images
+val: valid/images
+
+names:
+  0: Famondine
+  1: Glomipide
+  2: Loxoprofen
+  3: Myoben
+  4: Bronpass
+  5: Cough
+  6: Dexidiphen
+  7: Eupasidin
+```
+
+학습 결과는 기본적으로 `runs/detect/...` 경로에 저장됩니다.
+
+---
+
+## 🗃️ API 명세
+
+### `GET /`
+
+서버 상태 확인용 엔드포인트입니다.
+
+```json
+{
+  "message": "서버가 정상 작동 중입니다."
+}
+```
+
+### `POST /log`
+
+불량 의심 알약 정보를 저장합니다.
+
+```json
+{
+  "line_id": "Line_A_Minki",
+  "pill_name": "파모딘정",
+  "company": "제약회사명",
+  "status": "불량(의심)"
+}
+```
+
+---
+
+## 👨‍💻 기여도 및 역할
+
+- 🧠 **모델 설계 및 학습**
+  - YOLOv8n 기반 커스텀 탐지 모델 학습 및 하이퍼파라미터 조정
+- 🧪 **데이터셋 구성**
+  - 알약 이미지 수집, YOLO 라벨 구성, Roboflow 데이터셋 활용
+- 🖥️ **GUI 애플리케이션 개발**
+  - PySide6와 QThread를 활용해 실시간 영상 처리 중 UI 응답성을 유지
+- 🔌 **API 통합**
+  - 공공데이터 API 조회 및 FastAPI 서버 로그 저장 로직 구현
+- 🗄️ **DB 설계**
+  - SQLite 기반 불량 의심 로그 테이블 구성
+
+---
+
+## 📌 포트폴리오 포인트
+
+- ✅ 단순 이미지 분류가 아닌 **실시간 객체 탐지 시스템** 구현
+- ✅ AI 모델, GUI, 서버, 데이터베이스를 연결한 **엔드투엔드 프로젝트**
+- ✅ 제조 현장의 품질 검수 시나리오를 반영한 **스마트팩토리 응용 사례**
+- ✅ 공공데이터 API를 활용해 탐지 결과에 **실제 약품 정보**를 결합
+- ✅ 정상 데이터는 제외하고 불량 의심 데이터만 저장하는 **업무 로직 설계**
+
+---
+
+## ⚠️ GitHub 업로드 전 체크리스트
+
+- 🔐 `download_data.py`, `pill_gui.py`에 포함된 API 키는 `.env` 환경변수로 분리하기
+- 📍 `pill_gui.py`, `webcam_test.py`, `test.py`의 모델 경로를 상대 경로로 정리하기
+- 📦 `requirements.txt`를 추가해 설치 패키지를 고정하기
+- 🧾 학습용 `data.yaml` 파일을 프로젝트 폴더에 포함하기
+- 🧠 `*.pt`, `*.db`, `runs/`는 용량 및 개인정보 이슈가 있을 수 있어 필요 시 Release나 별도 링크로 제공하기
+
+---
+
+## 🔮 개선 방향
+
+- 📊 관리자용 대시보드 추가
+- 📷 이미지 업로드 기반 검사 기능 추가
+- 🧪 테스트 코드 및 API 문서 자동화
+- 🧩 모델 경로, 임계값, API 키를 설정 파일로 분리
+- 🚢 Docker 기반 실행 환경 구성
+- ⚙️ Jetson Nano 등 엣지 디바이스 배포를 위한 TensorRT 최적화
+
+---
+
+## 👤 제작자
+
+스마트팩토리 환경에서 사용할 수 있는 알약 검수 자동화 시스템을 목표로 제작한 AI 비전 프로젝트입니다.
