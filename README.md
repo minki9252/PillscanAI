@@ -1,5 +1,3 @@
-# 📄 README.md (Portfolio Version)
-
 ## 💊 PillscanAI: Deep Learning Based Pill Recognition & Info System
 > **딥러닝(YOLOv8)과 공공데이터 API를 활용한 지능형 알약 식별 및 실시간 관리 솔루션**
 
@@ -48,7 +46,7 @@
 
 | 실시간 탐지 및 정보 출력 | 불량 로그 및 상세 리포트 |
 | :---: | :---: |
-| ![Detection](https://via.placeholder.com/400x300?text=Detection+Screen) | ![Report](https://via.placeholder.com/400x300?text=Detail+Report+Screen) |
+| <img width="1302" height="882" alt="Image" src="https://github.com/user-attachments/assets/c3f75e3e-5aff-4dcf-8609-961dfdcbbaef" /> | ![Report](https://via.placeholder.com/400x300?text=Detail+Report+Screen) |
 *(실제 작동 스크린샷 이미지로 교체하시면 좋습니다)*
 
 ---
