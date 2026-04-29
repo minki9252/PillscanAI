@@ -46,7 +46,7 @@
 
 | 실시간 탐지 및 정보 출력 | 불량 로그 및 상세 리포트 |
 | :---: | :---: |
-| <img width="1302" height="882" alt="Image" src="https://github.com/user-attachments/assets/c3f75e3e-5aff-4dcf-8609-961dfdcbbaef" /> | ![Report](https://via.placeholder.com/400x300?text=Detail+Report+Screen) |
+| <img width="1302" height="882" alt="Image" src="https://github.com/user-attachments/assets/c3f75e3e-5aff-4dcf-8609-961dfdcbbaef" /> |
 *(실제 작동 스크린샷 이미지로 교체하시면 좋습니다)*
 
 ---
